@@ -1,16 +1,50 @@
 #!/bin/bash
-MOUNT_POINT="/mnt"
-ARCHIVE_PATH="/archive/$ARCHIVE_NAME"
 
+ARCHIVE_NAME="${ARCHIVE_NAME:-$1}"
+MOUNT_POINT="/mnt/archive"
+OVERLAY_DIR="/overlay/${ARCHIVE_NAME}"
+ARCHIVE_PATH="/archives/${ARCHIVE_NAME}"
+
+# Verifica se ARCHIVE_NAME è vuoto
 if [ -z "$ARCHIVE_NAME" ]; then
-    echo "Errore: Variabile ARCHIVE_NAME non impostata" >&2
+    echo "Errore: Nome dell'archivio non specificato."
     exit 1
 fi
-if [ -f "$ARCHIVE_PATH" ]; then
-    ratarmount --read-only "$ARCHIVE_PATH" "$MOUNT_POINT"
-    rsync "$@"
-    fusermount -u "$MOUNT_POINT"
+
+# Aggiungi .tar.lzo se non presente, altrimenti verifica che sia .tar.lzo
+if [[ "$ARCHIVE_NAME" =~ \.tar\.lzo$ ]]; then
+    ARCHIVE_PATH="/archives/$ARCHIVE_NAME"
 else
-    echo "Errore: Archivio $ARCHIVE_PATH non trovato" >&2
+    if [[ "$ARCHIVE_NAME" =~ \.tar\.[a-zA-Z0-9]+$ ]]; then
+        echo "Errore: Estensione non valida. Solo .tar.lzo è ammessa."
+        exit 1
+    fi
+    ARCHIVE_NAME="${ARCHIVE_NAME}.tar.lzo"
+    ARCHIVE_PATH="/archives/$ARCHIVE_NAME"
+fi
+
+# Validazione del nome (esclude caratteri pericolosi)
+if [[ ! "$ARCHIVE_NAME" =~ ^[a-zA-Z0-9_.-]+\.tar\.lzo$ ]]; then
+    echo "Errore: Nome dell'archivio non valido."
     exit 1
 fi
+
+# Crea l'archivio con compressione LZO se non esiste
+if [ ! -f "$ARCHIVE_PATH" ]; then
+    echo "Archivio $ARCHIVE_PATH non esiste, lo creo con compressione LZO."
+    mkdir -p /tmp/empty_dir
+    tar -C /tmp/empty_dir --use-compress-program=lzop -cf "$ARCHIVE_PATH" .
+    rmdir /tmp/empty_dir
+fi
+
+# Monta l'archivio con ratarmount
+mkdir -p "$OVERLAY_DIR" "$MOUNT_POINT"
+ratarmount --write-overlay "$OVERLAY_DIR" "$ARCHIVE_PATH" "$MOUNT_POINT"
+
+# Chiama rrsync in modalità read-write
+/usr/local/bin/rrsync -rw "$MOUNT_POINT/"
+
+# Smonta l'archivio
+umount "$MOUNT_POINT"
+# Opzionale: Committa le modifiche (sperimentale, commentato)
+# ratarmount --commit-overlay "$ARCHIVE_PATH"
