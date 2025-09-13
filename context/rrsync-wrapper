@@ -1,0 +1,16 @@
+#!/bin/bash
+MOUNT_POINT="/mnt"
+ARCHIVE_PATH="/archive/$ARCHIVE_NAME"
+
+if [ -z "$ARCHIVE_NAME" ]; then
+    echo "Errore: Variabile ARCHIVE_NAME non impostata" >&2
+    exit 1
+fi
+if [ -f "$ARCHIVE_PATH" ]; then
+    ratarmount --read-only "$ARCHIVE_PATH" "$MOUNT_POINT"
+    rsync "$@"
+    fusermount -u "$MOUNT_POINT"
+else
+    echo "Errore: Archivio $ARCHIVE_PATH non trovato" >&2
+    exit 1
+fi

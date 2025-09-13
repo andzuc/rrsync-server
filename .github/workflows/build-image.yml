@@ -1,0 +1,52 @@
+name: build-image
+
+on:
+  workflow_dispatch:
+   inputs:
+      python_version:
+        description: 'Python base Docker image tag (https://hub.docker.com/_/python/tags)'
+        required: true
+        default: '3.10-slim'
+
+env:
+  IMAGENAME: rrsync
+  PYTHON_VERSION: ${{ github.event.inputs.alpine_version || vars.PYTHON_VERSION }}
+
+jobs:
+  build-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set version value
+        id: version
+        run: |
+          echo "value=${PYTHON_VERSION}.$(date +'%Y%m%d').${{ github.run_number }}" >> $GITHUB_OUTPUT
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: env.BUILDKIT_STEP_LOG_MAX_SIZE=10485760
+      - name: Available platforms
+        run: echo ${{ steps.buildx.outputs.platforms }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Login to DockerHub
+      #   uses: docker/login-action@v2
+      #   with:
+      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
+      #     password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: "{{defaultContext}}:context"
+          build-args: |
+            PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.value }}
