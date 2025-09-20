@@ -1,50 +1,79 @@
-#!/bin/bash
+#!/bin/sh
+#https://grok.com/share/c2hhcmQtNA%3D%3D_602141ed-3932-415c-a3ad-4473ee8e83ec
 
 ARCHIVE_NAME="${ARCHIVE_NAME:-$1}"
-MOUNT_POINT="/mnt/archive"
-OVERLAY_DIR="/overlay/${ARCHIVE_NAME}"
+TEMP_DIR="/tmp/backup_${ARCHIVE_NAME}"
 ARCHIVE_PATH="/archives/${ARCHIVE_NAME}"
 
-# Verifica se ARCHIVE_NAME è vuoto
+# Check if ARCHIVE_NAME is empty
 if [ -z "$ARCHIVE_NAME" ]; then
-    echo "Errore: Nome dell'archivio non specificato."
+    echo "Error: Archive name not specified."
     exit 1
 fi
 
-# Aggiungi .tar.lzo se non presente, altrimenti verifica che sia .tar.lzo
-if [[ "$ARCHIVE_NAME" =~ \.tar\.lzo$ ]]; then
+# Add .tar.zst if not present, otherwise verify it's .tar.zst
+if echo "$ARCHIVE_NAME" | grep -q "\.tar\.zst$"; then
     ARCHIVE_PATH="/archives/$ARCHIVE_NAME"
 else
-    if [[ "$ARCHIVE_NAME" =~ \.tar\.[a-zA-Z0-9]+$ ]]; then
-        echo "Errore: Estensione non valida. Solo .tar.lzo è ammessa."
+    if echo "$ARCHIVE_NAME" | grep -q "\.tar\."; then
+        echo "Error: Invalid extension. Only .tar.zst is allowed."
         exit 1
     fi
-    ARCHIVE_NAME="${ARCHIVE_NAME}.tar.lzo"
+    ARCHIVE_NAME="${ARCHIVE_NAME}.tar.zst"
     ARCHIVE_PATH="/archives/$ARCHIVE_NAME"
 fi
 
-# Validazione del nome (esclude caratteri pericolosi)
-if [[ ! "$ARCHIVE_NAME" =~ ^[a-zA-Z0-9_.-]+\.tar\.lzo$ ]]; then
-    echo "Errore: Nome dell'archivio non valido."
+# Validate name (exclude dangerous characters)
+if ! echo "$ARCHIVE_NAME" | grep -q "^[a-zA-Z0-9_.-]\+\.tar\.zst$"; then
+    echo "Error: Invalid archive name."
     exit 1
 fi
 
-# Crea l'archivio con compressione LZO se non esiste
-if [ ! -f "$ARCHIVE_PATH" ]; then
-    echo "Archivio $ARCHIVE_PATH non esiste, lo creo con compressione LZO."
-    mkdir -p /tmp/empty_dir
-    tar -C /tmp/empty_dir --use-compress-program=lzop -cf "$ARCHIVE_PATH" .
-    rmdir /tmp/empty_dir
+# Create temp dir if it doesn't exist
+mkdir -p "$TEMP_DIR"
+
+# If archive exists AND temp dir is empty, decompress it
+if [ -f "$ARCHIVE_PATH" ] && [ ! "$(ls -A "$TEMP_DIR")" ]; then
+    echo "Archive $ARCHIVE_PATH exists and temp dir is empty, decompressing."
+    tar -I zstd -xf "$ARCHIVE_PATH" -C "$TEMP_DIR"
+    echo "Decompression complete. Temp dir now contains $(ls -1 "$TEMP_DIR" | wc -l) files/directories."
+elif [ -f "$ARCHIVE_PATH" ]; then
+    echo "Archive $ARCHIVE_PATH exists but temp dir already has $(ls -1 "$TEMP_DIR" | wc -l) files."
+    echo "Rsync will merge client files with existing archive content."
+else
+    echo "No existing archive, temp dir is ready for client files."
 fi
 
-# Monta l'archivio con ratarmount
-mkdir -p "$OVERLAY_DIR" "$MOUNT_POINT"
-ratarmount --write-overlay "$OVERLAY_DIR" "$ARCHIVE_PATH" "$MOUNT_POINT"
+echo "Temp directory ready at $TEMP_DIR"
+echo "Current contents: $(ls -la "$TEMP_DIR" | wc -l) items"
 
-# Chiama rrsync in modalità read-write
-/usr/local/bin/rrsync -rw "$MOUNT_POINT/"
+# Call rrsync in read-write mode on temp dir
+echo "Starting rsync session on $TEMP_DIR"
+echo "Client can resume with --partial --append if interrupted"
+/usr/local/bin/rrsync -rw "$TEMP_DIR/"
 
-# Smonta l'archivio
-umount "$MOUNT_POINT"
-# Opzionale: Committa le modifiche (sperimentale, commentato)
-# ratarmount --commit-overlay "$ARCHIVE_PATH"
+RSYNC_EXIT=$?
+
+echo "Rsync session ended with exit code $RSYNC_EXIT"
+
+# If rsync succeeded, create compressed tarball and clean temp dir
+if [ $RSYNC_EXIT -eq 0 ]; then
+    echo "Rsync completed successfully, creating compressed archive $ARCHIVE_PATH."
+    if tar -C "$TEMP_DIR" --use-compress-program=zstd -cf "$ARCHIVE_PATH" .; then
+        echo "Archive created successfully: $ARCHIVE_PATH ($(du -sh "$ARCHIVE_PATH"))"
+        # Clean up temp dir only on successful completion
+        rm -rf "$TEMP_DIR"
+        echo "Temporary directory cleaned up."
+    else
+        echo "Error: Failed to create archive $ARCHIVE_PATH"
+        echo "Keeping temporary directory $TEMP_DIR for manual inspection"
+        exit 1
+    fi
+else
+    echo "Rsync failed or was interrupted (exit code $RSYNC_EXIT)"
+    echo "Keeping temporary directory $TEMP_DIR for client resumption"
+    echo "Client should resume with: rsync --partial --append ..."
+    exit $RSYNC_EXIT
+fi
+
+echo "Process completed successfully."
