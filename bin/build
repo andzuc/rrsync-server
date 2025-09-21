@@ -1,9 +1,9 @@
 #!/bin/bash
 
-DOCKER_REPO="${DOCKER_REPO:-andzuc/rrsync}"
+DOCKER_REPO="${DOCKER_REPO:-andzuc/rrsync-server}"
 DOCKER_VERSION="${DOCKER_VERSION:-latest}"
 
 tar -C context -cf - . \
     |docker build \
-	    --progress plain \
-	    -t "${DOCKER_REPO}:${DOCKER_VERSION}" -
+    --progress plain \
+    -t "${DOCKER_REPO}:${DOCKER_VERSION}" -

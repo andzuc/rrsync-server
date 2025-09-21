@@ -1,8 +1,8 @@
 #!/bin/bash
 
-DOCKER_REPO="${DOCKER_REPO:-andzuc/rrsync}"
+DOCKER_REPO="${DOCKER_REPO:-andzuc/rrsync-server}"
 DOCKER_VERSION="${DOCKER_VERSION:-latest}"
 
 docker run --rm -it \
-       --entrypoint /bin/bash \
+       --entrypoint /bin/sh \
        "${DOCKER_REPO}:${DOCKER_VERSION}"

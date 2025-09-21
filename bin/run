@@ -1,8 +1,12 @@
 #!/bin/bash
 
-DOCKER_REPO="${DOCKER_REPO:-andzuc/rrsync}"
+DOCKER_REPO="${DOCKER_REPO:-andzuc/rrsync-server}"
 DOCKER_VERSION="${DOCKER_VERSION:-latest}"
 
-docker run --rm -it \
+docker run --rm -d \
+       -p 2222:22 \
+       --mount type=volume,source=rsync-archives,target=/archives \
+       -e GPG_KEYID="${GPG_KEYID}" \
+       --name rrsync-server \
        "${DOCKER_REPO}:${DOCKER_VERSION}" \
        "$@"
