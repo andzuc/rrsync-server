@@ -23,10 +23,8 @@ RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/
     # Create directories
     mkdir -p /archives /root/.ssh /var/run/sshd
 
-# Copy rrsync from builder stage (downloaded with Debian's curl)
-COPY --from=rrsync-downloader /rrsync /usr/local/bin/rrsync
-RUN chmod +x /usr/local/bin/rrsync
-
+# Copy scripts to Alpine image
+COPY --from=rrsync-downloader --chmod=755 /rrsync /usr/local/bin/rrsync
 COPY rrsync-wrapper /usr/local/bin/rrsync-wrapper
 COPY ssh-init /usr/local/bin/ssh-init
 
