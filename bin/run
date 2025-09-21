@@ -1,12 +1,51 @@
 #!/bin/bash
+MYDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "${MYDIR}/.."
+set -e
 
+# Configuration with defaults
 DOCKER_REPO="${DOCKER_REPO:-andzuc/rrsync-server}"
 DOCKER_VERSION="${DOCKER_VERSION:-latest}"
+RSYNC_ARCHIVES="${RSYNC_ARCHIVES:-rsync-archives}"
+GPG_KEYID="${GPG_KEYID:-}"
+
+# Validate required variables
+if [ -z "$GPG_KEYID" ]; then
+    echo "Error: GPG_KEYID environment variable is required"
+    echo "Set it with: export GPG_KEYID=ABC123DEF456"
+    exit 1
+fi
+
+# Ensure volume exists
+if ! docker volume inspect "${RSYNC_ARCHIVES}" >/dev/null 2>&1 ; then
+    echo docker volume create "${RSYNC_ARCHIVES}"
+    docker volume create "${RSYNC_ARCHIVES}"
+fi
+docker volume inspect "${RSYNC_ARCHIVES}"
+
+# Start container
+echo "Starting rrsync-server..."
+echo "  Repository: ${DOCKER_REPO}:${DOCKER_VERSION}"
+echo "  Volume: ${RSYNC_ARCHIVES}"
+echo "  GPG Key: ${GPG_KEYID}"
+echo "  Port: 2222"
 
 docker run --rm -d \
        -p 2222:22 \
-       --mount type=volume,source=rsync-archives,target=/archives \
+       --mount type=volume,source="${RSYNC_ARCHIVES}",target=/archives \
        -e GPG_KEYID="${GPG_KEYID}" \
        --name rrsync-server \
        "${DOCKER_REPO}:${DOCKER_VERSION}" \
        "$@"
+
+# Health check
+if [ $? -eq 0 ]; then
+    echo "✓ rrsync-server started successfully!"
+    echo "  Container ID: $(docker ps --filter name=rrsync-server -q)"
+    echo "  Logs: docker logs rrsync-server"
+    echo "  onnect: rsync -avz -e 'ssh -o SendEnv=ARCHIVE_NAME=newarchive -p 2222' /local/path/ root@localhost:/dummy/"
+    echo "  Volume: docker volume inspect ${RSYNC_ARCHIVES}"
+else
+    echo "✗ Failed to start rrsync-server"
+    exit 1
+fi

@@ -1,0 +1,35 @@
+#!/bin/bash
+
+set -e
+
+# Configurazione
+ARCHIVE_NAME="${1:-project-backup}"
+LOCAL_PATH="${2:-./data/}"
+REMOTE_HOST="localhost"
+REMOTE_PORT="2222"
+RSYNC_OPTS="-avz --progress --partial --append"
+
+# Validate inputs
+if [ -z "$ARCHIVE_NAME" ]; then
+    echo "Usage: $0 <archive_name> [local_path]"
+    echo "Example: $0 project-backup ./mydata/"
+    exit 1
+fi
+
+if [ ! -d "$LOCAL_PATH" ]; then
+    echo "Error: Local path '$LOCAL_PATH' does not exist"
+    exit 1
+fi
+
+echo "Starting backup..."
+echo "  Archive: $ARCHIVE_NAME.tar.zst"
+echo "  Source: $LOCAL_PATH"
+echo "  Destination: rsync-server:$REMOTE_PORT"
+
+# Execute rsync
+rsync $RSYNC_OPTS \
+  -e "ssh -o SendEnv=ARCHIVE_NAME=$ARCHIVE_NAME -p $REMOTE_PORT" \
+  "$LOCAL_PATH" \
+  "root@$REMOTE_HOST:/dummy/"
+
+echo "✓ Backup completed: $ARCHIVE_NAME.tar.zst"
