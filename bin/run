@@ -34,7 +34,7 @@ echo "  Volume: ${RRSYNC_VOLUME}"
 echo "  GPG Key: ${GPG_KEYID}"
 echo "  Port: 2222"
 
-docker run -d \
+docker run --rm -d \
        -p 2222:22 \
        --mount type=volume,source="${RRSYNC_VOLUME}",target=/archives \
        -e GPG_KEYID="${GPG_KEYID}" \
