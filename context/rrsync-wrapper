@@ -1,6 +1,10 @@
 #!/bin/sh
 #https://grok.com/share/c2hhcmQtNA%3D%3D_602141ed-3932-415c-a3ad-4473ee8e83ec
 
+# Redirect all logs to a file instead of stdout
+exec 1>>/var/log/rrsync-wrapper.log
+exec 2>&1
+
 ARCHIVE_NAME="${ARCHIVE_NAME:-$1}"
 TEMP_DIR="/tmp/backup_${ARCHIVE_NAME}"
 ARCHIVE_PATH="/archives/${ARCHIVE_NAME}"
@@ -47,10 +51,10 @@ fi
 echo "Temp directory ready at $TEMP_DIR"
 echo "Current contents: $(ls -la "$TEMP_DIR" | wc -l) items"
 
-# Call rrsync in read-write mode on temp dir
+# Call rrsync in read-write mode (no -rw flag, as it's the default)
 echo "Starting rsync session on $TEMP_DIR"
 echo "Client can resume with --partial --append if interrupted"
-/usr/local/bin/rrsync -rw "$TEMP_DIR/"
+/usr/local/bin/rrsync "$TEMP_DIR/"
 
 RSYNC_EXIT=$?
 

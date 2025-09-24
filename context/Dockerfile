@@ -12,16 +12,17 @@ RUN curl -L --retry 3 --retry-delay 5 --fail \
     https://rsync.samba.org/ftp/unpacked/rsync/support/rrsync
 
 # Stage 2: Runtime - minimal Alpine image
-FROM alpine:latest
+FROM alpine:3.20
 
 # Install required runtime dependencies, including gpg for dynamic key retrieval
-RUN apk add --no-cache rsync openssh tar zstd gnupg
+RUN apk add --no-cache rsync openssh tar zstd gnupg python3
 
 # Configure SSH
 RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
     echo "AcceptEnv ARCHIVE_NAME" >> /etc/ssh/sshd_config && \
     # Create directories
-    mkdir -p /archives /root/.ssh /var/run/sshd && \
+    mkdir -p /archives /root/.ssh /var/run/sshd /var/log && \
+    touch /var/log/rrsync-wrapper.log && \
     # Generate SSH host keys
     ssh-keygen -A && \
     # Verify host keys

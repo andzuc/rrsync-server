@@ -3,7 +3,7 @@
 set -e
 
 # Configurazione
-ARCHIVE_NAME="${1:-project-backup}"
+export ARCHIVE_NAME="${1:-project-backup}"
 LOCAL_PATH="${2:-./data/}"
 REMOTE_HOST="localhost"
 REMOTE_PORT="2222"
@@ -28,7 +28,7 @@ echo "  Destination: rsync-server:$REMOTE_PORT"
 
 # Execute rsync
 rsync $RSYNC_OPTS \
-  -e "ssh -o SendEnv=ARCHIVE_NAME=$ARCHIVE_NAME -p $REMOTE_PORT" \
+  -e "ssh -vvv -o SendEnv=ARCHIVE_NAME -p $REMOTE_PORT" \
   "$LOCAL_PATH" \
   "root@$REMOTE_HOST:/dummy/"
 
