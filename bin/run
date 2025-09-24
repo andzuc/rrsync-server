@@ -3,10 +3,14 @@ MYDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "${MYDIR}/.."
 set -e
 
+if [ -f .env ]; then
+    source .env
+fi
+
 # Configuration with defaults
 DOCKER_REPO="${DOCKER_REPO:-andzuc/rrsync-server}"
 DOCKER_VERSION="${DOCKER_VERSION:-latest}"
-RSYNC_ARCHIVES="${RSYNC_ARCHIVES:-rsync-archives}"
+RRSYNC_VOLUME="${RRSYNC_VOLUME:-rrsync-archives}"
 GPG_KEYID="${GPG_KEYID:-}"
 
 # Validate required variables
@@ -17,22 +21,22 @@ if [ -z "$GPG_KEYID" ]; then
 fi
 
 # Ensure volume exists
-if ! docker volume inspect "${RSYNC_ARCHIVES}" >/dev/null 2>&1 ; then
-    echo docker volume create "${RSYNC_ARCHIVES}"
-    docker volume create "${RSYNC_ARCHIVES}"
+if ! docker volume inspect "${RRSYNC_VOLUME}" >/dev/null 2>&1 ; then
+    echo docker volume create "${RRSYNC_VOLUME}"
+    docker volume create "${RRSYNC_VOLUME}"
 fi
-docker volume inspect "${RSYNC_ARCHIVES}"
+docker volume inspect "${RRSYNC_VOLUME}"
 
 # Start container
 echo "Starting rrsync-server..."
 echo "  Repository: ${DOCKER_REPO}:${DOCKER_VERSION}"
-echo "  Volume: ${RSYNC_ARCHIVES}"
+echo "  Volume: ${RRSYNC_VOLUME}"
 echo "  GPG Key: ${GPG_KEYID}"
 echo "  Port: 2222"
 
-docker run --rm -d \
+docker run -d \
        -p 2222:22 \
-       --mount type=volume,source="${RSYNC_ARCHIVES}",target=/archives \
+       --mount type=volume,source="${RRSYNC_VOLUME}",target=/archives \
        -e GPG_KEYID="${GPG_KEYID}" \
        --name rrsync-server \
        "${DOCKER_REPO}:${DOCKER_VERSION}" \
@@ -43,8 +47,8 @@ if [ $? -eq 0 ]; then
     echo "✓ rrsync-server started successfully!"
     echo "  Container ID: $(docker ps --filter name=rrsync-server -q)"
     echo "  Logs: docker logs rrsync-server"
-    echo "  onnect: rsync -avz -e 'ssh -o SendEnv=ARCHIVE_NAME=newarchive -p 2222' /local/path/ root@localhost:/dummy/"
-    echo "  Volume: docker volume inspect ${RSYNC_ARCHIVES}"
+    echo "  Connect: rsync -avz -e 'ssh -o SendEnv=ARCHIVE_NAME=newarchive -p 2222' /local/path/ root@localhost:/dummy/"
+    echo "  Volume: docker volume inspect ${RRSYNC_VOLUME}"
 else
     echo "✗ Failed to start rrsync-server"
     exit 1

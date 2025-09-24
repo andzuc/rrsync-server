@@ -21,7 +21,11 @@ RUN apk add --no-cache rsync openssh tar zstd gnupg
 RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
     echo "AcceptEnv ARCHIVE_NAME" >> /etc/ssh/sshd_config && \
     # Create directories
-    mkdir -p /archives /root/.ssh /var/run/sshd
+    mkdir -p /archives /root/.ssh /var/run/sshd && \
+    # Generate SSH host keys
+    ssh-keygen -A && \
+    # Verify host keys
+    ls -l /etc/ssh/ssh_host_*_key
 
 # Copy scripts to Alpine image
 COPY --from=rrsync-downloader --chmod=755 /rrsync /usr/local/bin/rrsync
