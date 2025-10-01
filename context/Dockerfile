@@ -17,26 +17,27 @@ FROM alpine:3.20
 # Install required runtime dependencies, including gpg for dynamic key retrieval
 RUN apk add --no-cache rsync openssh tar zstd gnupg python3
 
+ARG RRSYNC_UID=1000
+ARG RRSYNC_GID=1000
+RUN addgroup -g ${RRSYNC_GID} rrsync && \
+    adduser -u ${RRSYNC_UID} -G rrsync -D rrsync && \
+    passwd -u rrsync
+
 # Configure SSH
-RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config && \
+    sed -i 's/#PubkeyAuthentication .*/PubkeyAuthentication yes/' /etc/ssh/sshd_config && \
     echo "AcceptEnv ARCHIVE_NAME" >> /etc/ssh/sshd_config && \
     # Create directories
-    mkdir -p /archives /root/.ssh /var/run/sshd /var/log && \
-    touch /var/log/rrsync-wrapper.log && \
+    mkdir -p /archives /var/run/sshd /var/log && \
     # Generate SSH host keys
     ssh-keygen -A && \
-    # Verify host keys
     ls -l /etc/ssh/ssh_host_*_key
 
 # Copy scripts to Alpine image
 COPY --from=rrsync-downloader --chmod=755 /rrsync /usr/local/bin/rrsync
 COPY rrsync-wrapper /usr/local/bin/rrsync-wrapper
+COPY rrsync-wrapper-init /usr/local/bin/rrsync-wrapper-init
 COPY ssh-init /usr/local/bin/ssh-init
-
-# Create placeholder authorized_keys (will be replaced at runtime)
-RUN echo '# Placeholder - will be replaced by ssh-init' > /root/.ssh/authorized_keys && \
-    chmod 600 /root/.ssh/authorized_keys && \
-    chmod 700 /root/.ssh
 
 EXPOSE 22
 ENTRYPOINT ["/usr/local/bin/ssh-init"]

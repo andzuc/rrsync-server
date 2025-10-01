@@ -30,6 +30,6 @@ echo "  Destination: rsync-server:$REMOTE_PORT"
 rsync $RSYNC_OPTS \
   -e "ssh -vvv -o SendEnv=ARCHIVE_NAME -p $REMOTE_PORT" \
   "$LOCAL_PATH" \
-  "root@$REMOTE_HOST:/dummy/"
+  "rrsync@$REMOTE_HOST:/dummy/"
 
 echo "✓ Backup completed: $ARCHIVE_NAME.tar.zst"

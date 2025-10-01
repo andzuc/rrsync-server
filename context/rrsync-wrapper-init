@@ -1,0 +1,51 @@
+#!/bin/sh
+
+set -x
+set -e  # Exit on any error
+
+# Wait for GPG_KEYID environment variable
+if [ -z "$GPG_KEYID" ]; then
+    echo "Error: GPG_KEYID environment variable is required"
+    echo "Usage: docker run -e GPG_KEYID=ABC123DEF456 ..."
+    exit 1
+fi
+
+echo "Initializing SSH with GPG key: $GPG_KEYID"
+
+# Import GPG key if not already present
+if ! gpg --list-keys "$GPG_KEYID" >/dev/null 2>&1; then
+    echo "Importing GPG key $GPG_KEYID from keyserver..."
+    gpg --recv-key "$GPG_KEYID"
+else
+    echo "GPG key $GPG_KEYID already imported"
+fi
+
+# Extract SSH public key
+echo "Extracting SSH public key from GPG key..."
+if ! gpg --export-ssh-key "$GPG_KEYID" > /tmp/public_key; then
+    echo "Error: Failed to extract SSH public key from GPG key $GPG_KEYID"
+    exit 1
+fi
+
+# Configure authorized_keys with rrsync-wrapper command
+echo "Configuring authorized_keys..."
+mkdir .ssh
+cat > .ssh/authorized_keys << EOF
+command="/usr/local/bin/rrsync-wrapper",no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc,no-X11-forwarding $(cat /tmp/public_key)
+EOF
+chmod 600 .ssh/authorized_keys
+chmod 700 .ssh
+
+# Verify configuration
+if [ ! -s .ssh/authorized_keys ]; then
+    echo "Error: authorized_keys file is empty"
+    exit 1
+fi
+
+echo "SSH configuration complete:"
+echo "  GPG Key ID: $GPG_KEYID"
+echo "  Authorized keys: $(wc -l < $(pwd)/.ssh/authorized_keys) key(s)"
+head -1 .ssh/authorized_keys
+
+# Clean up temporary file
+rm -f /tmp/public_key
