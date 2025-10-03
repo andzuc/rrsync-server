@@ -28,7 +28,7 @@ RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/s
     sed -i 's/#PubkeyAuthentication .*/PubkeyAuthentication yes/' /etc/ssh/sshd_config && \
     echo "AcceptEnv ARCHIVE_NAME" >> /etc/ssh/sshd_config && \
     # Create directories
-    mkdir -p /archives /var/run/sshd /var/log && \
+    mkdir -p /archives /var/run/sshd && \
     # Generate SSH host keys
     ssh-keygen -A && \
     ls -l /etc/ssh/ssh_host_*_key

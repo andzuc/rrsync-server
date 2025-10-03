@@ -49,3 +49,5 @@ head -1 .ssh/authorized_keys
 
 # Clean up temporary file
 rm -f /tmp/public_key
+
+touch rrsync-wrapper.log
