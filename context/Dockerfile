@@ -29,6 +29,7 @@ RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/s
     echo "AcceptEnv ARCHIVE_NAME" >> /etc/ssh/sshd_config && \
     # Create directories
     mkdir -p /archives /var/run/sshd && \
+    chown rrsync:rrsync /archives && \
     # Generate SSH host keys
     ssh-keygen -A && \
     ls -l /etc/ssh/ssh_host_*_key
