@@ -1,5 +1,11 @@
 #!/bin/sh
 
+addgroup -g ${RRSYNC_GID} rrsync
+adduser -u ${RRSYNC_UID} -G rrsync -D rrsync
+passwd -u rrsync
+
+chown rrsync:rrsync /archives
+
 cd /home/rrsync
 su rrsync -s /bin/sh /usr/local/bin/rrsync-wrapper-init
 
