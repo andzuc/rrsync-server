@@ -61,7 +61,7 @@ log "Current contents: $(ls -la "$TEMP_DIR" | wc -l) items"
 # Call rrsync in read-write mode on temp dir (no redirection for output, as it's needed for protocol)
 log "Starting rsync session on $TEMP_DIR"
 log "Client can resume with --partial --append if interrupted"
-/usr/local/bin/rrsync "$TEMP_DIR/"
+/usr/bin/rrsync "$TEMP_DIR/"
 
 RSYNC_EXIT=$?
 
