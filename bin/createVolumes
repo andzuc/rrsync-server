@@ -1,0 +1,15 @@
+#!/bin/bash
+MYDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "${MYDIR}"
+
+set -e
+source sharedFunctions.sh 
+
+cd ..
+if [ -f .env ]; then
+    source .env
+fi
+
+set +e
+createLocalVolume rrsync-archives "${RRSYNC_ARCHIVES_PATH}"
+createLocalVolume rrsync-tmp "${RRSYNC_TMP_PATH}"
