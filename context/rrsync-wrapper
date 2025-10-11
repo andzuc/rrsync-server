@@ -10,7 +10,7 @@ log() {
 }
 
 ARCHIVE_NAME="${ARCHIVE_NAME:-$1}"
-TEMP_DIR="/tmp/backup_${ARCHIVE_NAME}"
+TEMP_DIR="/tmp/rrsync/backup_${ARCHIVE_NAME}"
 ARCHIVE_PATH="/archives/${ARCHIVE_NAME}"
 
 # Check if ARCHIVE_NAME is empty

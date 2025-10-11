@@ -10,7 +10,8 @@ fi
 # Configuration with defaults
 DOCKER_REPO="${DOCKER_REPO:-andzuc/rrsync-server}"
 DOCKER_VERSION="${DOCKER_VERSION:-latest}"
-RRSYNC_VOLUME="${RRSYNC_VOLUME:-rrsync-archives}"
+RRSYNC_ARCHIVES="${RRSYNC_ARCHIVES:-rrsync-archives}"
+RRSYNC_TMP="${RRSYNC_TMP:-rrsync-tmp}"
 GPG_KEYID="${GPG_KEYID:-}"
 
 # Validate required variables
@@ -20,23 +21,32 @@ if [ -z "$GPG_KEYID" ]; then
     exit 1
 fi
 
-# Ensure volume exists
-if ! docker volume inspect "${RRSYNC_VOLUME}" >/dev/null 2>&1 ; then
-    echo docker volume create "${RRSYNC_VOLUME}"
-    docker volume create "${RRSYNC_VOLUME}"
+# Ensure RRSYNC_ARCHIVES volume exists
+if ! docker volume inspect "${RRSYNC_ARCHIVES}" >/dev/null 2>&1 ; then
+    echo docker volume create "${RRSYNC_ARCHIVES}"
+    docker volume create "${RRSYNC_ARCHIVES}"
 fi
-docker volume inspect "${RRSYNC_VOLUME}"
+docker volume inspect "${RRSYNC_ARCHIVES}"
+
+# Ensure RRSYNC_TMP volume exists
+if ! docker volume inspect "${RRSYNC_TMP}" >/dev/null 2>&1 ; then
+    echo docker volume create "${RRSYNC_TMP}"
+    docker volume create "${RRSYNC_TMP}"
+fi
+docker volume inspect "${RRSYNC_TMP}"
 
 # Start container
 echo "Starting rrsync-server..."
 echo "  Repository: ${DOCKER_REPO}:${DOCKER_VERSION}"
-echo "  Volume: ${RRSYNC_VOLUME}"
+echo "  Archives volume: ${RRSYNC_ARCHIVES}"
+echo "  Tmp volume: ${RRSYNC_TMP}"
 echo "  GPG Key: ${GPG_KEYID}"
 echo "  Port: 2222"
 
 docker run --rm -d \
        -p 2222:22 \
-       --mount type=volume,source="${RRSYNC_VOLUME}",target=/archives \
+       --mount type=volume,source="${RRSYNC_ARCHIVES}",target=/archives \
+       --mount type=volume,source="${RRSYNC_TMP}",target=/tmp/rrsync \
        -e GPG_KEYID="${GPG_KEYID}" \
        --name rrsync-server \
        "${DOCKER_REPO}:${DOCKER_VERSION}" \
@@ -48,7 +58,8 @@ if [ $? -eq 0 ]; then
     echo "  Container ID: $(docker ps --filter name=rrsync-server -q)"
     echo "  Logs: docker logs rrsync-server"
     echo "  Connect: rsync -avz -e 'ssh -o SendEnv=ARCHIVE_NAME=newarchive -p 2222' /local/path/ root@localhost:/dummy/"
-    echo "  Volume: docker volume inspect ${RRSYNC_VOLUME}"
+    echo "  Archives volume: docker volume inspect ${RRSYNC_ARCHIVES}"
+    echo "  Tmp volume: docker volume inspect ${RRSYNC_TMP}"
 else
     echo "✗ Failed to start rrsync-server"
     exit 1
