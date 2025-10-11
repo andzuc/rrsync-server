@@ -1,0 +1,60 @@
+#!/bin/bash
+
+set -e
+
+# Configuration
+export ARCHIVE_NAME="${1:-project-backup}"
+LOCAL_PATH="${2:-./data/}"
+REMOTE_HOST="${RRSYNC_SERVER:-localhost}"
+REMOTE_PORT="${RRSYNC_PORT:-2222}"
+RSYNC_OPTS="-avz --progress --partial --append"
+
+# Determine operation based on script name
+SCRIPT_NAME=$(basename "$0")
+
+# Validate inputs
+if [ -z "$ARCHIVE_NAME" ]; then
+    echo "Usage: $0 <archive_name> [local_path]"
+    echo "Example: $0 project-backup ./mydata/"
+    exit 1
+fi
+
+if [ ! -d "$LOCAL_PATH" ]; then
+    echo "Error: Local path '$LOCAL_PATH' does not exist"
+    exit 1
+fi
+
+if [ "$SCRIPT_NAME" = "client-backup" ]; then
+    # Backup operation
+    echo "Starting backup..."
+    echo "  Archive: $ARCHIVE_NAME.tar.zst"
+    echo "  Source: $LOCAL_PATH"
+    echo "  Destination: ${REMOTE_HOST}:$REMOTE_PORT"
+
+    # Execute rsync for backup
+    rsync $RSYNC_OPTS \
+      -e "ssh -vvv -o SendEnv=ARCHIVE_NAME -p $REMOTE_PORT" \
+      "$LOCAL_PATH" \
+      "rrsync@$REMOTE_HOST:/"
+
+    echo "✓ Backup completed: $ARCHIVE_NAME.tar.zst"
+
+elif [ "$SCRIPT_NAME" = "client-restore" ]; then
+    # Restore operation
+    echo "Starting restore..."
+    echo "  Archive: $ARCHIVE_NAME.tar.zst"
+    echo "  Source: ${REMOTE_HOST}:$REMOTE_PORT"
+    echo "  Destination: $LOCAL_PATH"
+
+    # Execute rsync for restore
+    rsync $RSYNC_OPTS \
+      -e "ssh -vvv -o SendEnv=ARCHIVE_NAME -p $REMOTE_PORT" \
+      "rrsync@$REMOTE_HOST:/" \
+      "$LOCAL_PATH"
+
+    echo "✓ Restore completed: $ARCHIVE_NAME.tar.zst"
+
+else
+    echo "Error: Script must be named 'client-backup' or 'client-restore'"
+    exit 1
+fi
