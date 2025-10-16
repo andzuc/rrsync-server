@@ -2,11 +2,11 @@
 #https://grok.com/share/c2hhcmQtNA%3D%3D_602141ed-3932-415c-a3ad-4473ee8e83ec
 
 # Open a file descriptor for logging
-exec 3>>rrsync-wrapper.log
+exec 3>>"${LOG_FIFO}"
 
-# Log function to send messages to the log file
+# Log function to send messages to the log
 log() {
-    echo "$@" >&3
+    echo "$(basename $0): $@" >&3
 }
 
 ARCHIVE_NAME="${ARCHIVE_NAME:-$1}"

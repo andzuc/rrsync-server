@@ -1,11 +1,20 @@
 #!/bin/sh
 
+set -e
+
 addgroup -g ${RRSYNC_GID} rrsync
 adduser -u ${RRSYNC_UID} -G rrsync -D rrsync
 passwd -u rrsync
 
-mkdir /tmp/rrsync
+[ -d /tmp/rrsync ] || mkdir /tmp/rrsync
 chown rrsync:rrsync /archives /tmp/rrsync
+
+# FIFO ttsync-wrapper
+export LOG_FIFO=/tmp/rrsync.fifo
+mkfifo ${LOG_FIFO}
+chown root:rrsync ${LOG_FIFO}
+chmod 0460 ${LOG_FIFO}
+cat ${LOG_FIFO} &
 
 cd /home/rrsync
 su rrsync -s /bin/sh /usr/local/bin/rrsync-wrapper-init
@@ -13,4 +22,4 @@ su rrsync -s /bin/sh /usr/local/bin/rrsync-wrapper-init
 # Start SSH daemon
 cd /
 echo "Starting SSH daemon..."
-exec /usr/sbin/sshd -D
+exec /usr/sbin/sshd -D -e
