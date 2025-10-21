@@ -1,4 +1,5 @@
-FROM alpine:3.20
+ARG ALPINE_VERSION=3.20
+FROM alpine:${ALPINE_VERSION}
 
 # Install required runtime dependencies, including gpg for dynamic key retrieval
 RUN apk add --no-cache rsync rrsync openssh tar zstd gnupg python3
