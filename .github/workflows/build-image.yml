@@ -7,8 +7,6 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    env:
-      TAG_PATTERN: "^([0-9]+)\.([0-9]+)-alpine-(.*)$"
     outputs:
       major: ${{ steps.decode.outputs.major }}
       minor: ${{ steps.decode.outputs.minor }}
@@ -19,6 +17,7 @@ jobs:
         id: decode
         run: |
           TAG="${{ github.ref_name }}"
+          TAG_PATTERN="^([0-9]+)\\.([0-9]+)-alpine-(.*)$"
           echo "Tag received: $TAG"
           if [[ $TAG =~ $TAG_PATTERN ]]; then
             echo "major=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
