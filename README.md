@@ -8,7 +8,6 @@ Restricted rsync server with archive compression (zstd) and GPG key authenticati
 - **Automatic archive creation** (.tar.zst) after transfers
 - **Resume support** with `--partial --append`
 - **GPG key authentication** (runtime configuration)
-- **Multi-stage Docker build** (Debian builder + Alpine runtime)
 - **Volume-based persistence** for archives
 
 ## Quick Start
