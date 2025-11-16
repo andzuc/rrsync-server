@@ -1,7 +1,8 @@
-#!/bin/sh
+#!/bin/sh -x
 #https://grok.com/share/c2hhcmQtNA%3D%3D_602141ed-3932-415c-a3ad-4473ee8e83ec
 
 # Open a file descriptor for logging
+exec 2>>"${LOG_FIFO}"
 exec 3>>"${LOG_FIFO}"
 
 # Log function to send messages to the log
@@ -42,21 +43,26 @@ fi
 
 # Create temp dir if it doesn't exist
 mkdir -p "$TEMP_DIR"
+TEMP_DIR_TIME="${TEMP_DIR}.time"
 
 # If archive exists AND temp dir is empty, decompress it
 if [ -f "$ARCHIVE_PATH" ] && [ ! "$(ls -A "$TEMP_DIR")" ]; then
     log "Archive $ARCHIVE_PATH exists and temp dir is empty, decompressing."
     tar -I zstd -xf "$ARCHIVE_PATH" -C "$TEMP_DIR"
     log "Decompression complete. Temp dir now contains $(ls -1 "$TEMP_DIR" | wc -l) files/directories."
-    TEMP_DIR_TIME="${TEMP_DIR}.time"
     touch $TEMP_DIR_TIME
-    sleep 2 # find has 1 second resolution
+    TEMP_DIR_MODIFIED=0
 elif [ -f "$ARCHIVE_PATH" ]; then
     log "Archive $ARCHIVE_PATH exists but temp dir already has $(ls -1 "$TEMP_DIR" | wc -l) files."
     log "Rsync will merge client files with existing archive content."
+    touch $TEMP_DIR_TIME
+    TEMP_DIR_MODIFIED=1
 else
     log "No existing archive, temp dir is ready for client files."
+    touch $TEMP_DIR_TIME
+    TEMP_DIR_MODIFIED=1
 fi
+sleep 2 # find has 1 second resolution
 
 log "Temp directory ready at $TEMP_DIR"
 log "Current contents: $(ls -la "$TEMP_DIR" | wc -l) items"
@@ -69,8 +75,10 @@ RSYNC_EXIT=$?
 
 log "Rsync session ended with exit code $RSYNC_EXIT"
 
-if find "$TEMP_DIR" -newermm "$TEMP_DIR_TIME" -print -quit 2>/dev/null|grep -q .; then
-    TEMP_DIR_MODIFIED=1
+if [ $TEMP_DIR_MODIFIED -eq 0 ]; then
+    if find "$TEMP_DIR" -newermm "$TEMP_DIR_TIME" -print -quit 2>/dev/null|grep -q .; then
+	TEMP_DIR_MODIFIED=1
+    fi
 fi
 
 # If rsync succeeded, create compressed tarball and clean temp dir
