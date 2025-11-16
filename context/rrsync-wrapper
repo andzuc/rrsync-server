@@ -49,11 +49,11 @@ TEMP_DIR_TIME="${TEMP_DIR}.time"
 if [ -f "$ARCHIVE_PATH" ] && [ ! "$(ls -A "$TEMP_DIR")" ]; then
     log "Archive $ARCHIVE_PATH exists and temp dir is empty, decompressing."
     tar -I zstd -xf "$ARCHIVE_PATH" -C "$TEMP_DIR"
-    log "Decompression complete. Temp dir now contains $(ls -1 "$TEMP_DIR" | wc -l) files/directories."
+    log "Decompression complete. Temp dir now contains $(find "$TEMP_DIR" | wc -l) files/directories."
     touch $TEMP_DIR_TIME
     TEMP_DIR_MODIFIED=0
 elif [ -f "$ARCHIVE_PATH" ]; then
-    log "Archive $ARCHIVE_PATH exists but temp dir already has $(ls -1 "$TEMP_DIR" | wc -l) files."
+    log "Archive $ARCHIVE_PATH exists but temp dir already has $(find "$TEMP_DIR" | wc -l) files/directories."
     log "Rsync will merge client files with existing archive content."
     touch $TEMP_DIR_TIME
     TEMP_DIR_MODIFIED=1
@@ -64,8 +64,9 @@ else
 fi
 sleep 2 # find has 1 second resolution
 
+TEMP_DIR_NUM="$(find "$TEMP_DIR" | wc -l)"
 log "Temp directory ready at $TEMP_DIR"
-log "Current contents: $(ls -la "$TEMP_DIR" | wc -l) items"
+log "Current contents: $TEMP_DIR_NUM items"
 
 # Call rrsync in read-write mode on temp dir (no redirection for output, as it's needed for protocol)
 log "Starting rsync session on $TEMP_DIR"
@@ -74,9 +75,10 @@ log "Client can resume with --partial --append if interrupted"
 RSYNC_EXIT=$?
 
 log "Rsync session ended with exit code $RSYNC_EXIT"
+log "Temp dir now contains $(find "$TEMP_DIR" | wc -l) files/directories."
 
 if [ $TEMP_DIR_MODIFIED -eq 0 ]; then
-    if find "$TEMP_DIR" -newermm "$TEMP_DIR_TIME" -print -quit 2>/dev/null|grep -q .; then
+    if find "$TEMP_DIR" -newer "$TEMP_DIR_TIME" -print -quit 2>/dev/null|grep -q .; then
 	TEMP_DIR_MODIFIED=1
     fi
 fi

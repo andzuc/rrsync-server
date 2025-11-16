@@ -14,7 +14,7 @@ export LOG_FIFO=/tmp/rrsync.fifo
 mkfifo ${LOG_FIFO}
 chown root:rrsync ${LOG_FIFO}
 chmod 0460 ${LOG_FIFO}
-cat ${LOG_FIFO} &
+tail -n +0 -f ${LOG_FIFO} &
 
 cd /home/rrsync
 su rrsync -s /bin/sh /usr/local/bin/rrsync-wrapper-init
