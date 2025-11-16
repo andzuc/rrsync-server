@@ -48,6 +48,9 @@ if [ -f "$ARCHIVE_PATH" ] && [ ! "$(ls -A "$TEMP_DIR")" ]; then
     log "Archive $ARCHIVE_PATH exists and temp dir is empty, decompressing."
     tar -I zstd -xf "$ARCHIVE_PATH" -C "$TEMP_DIR"
     log "Decompression complete. Temp dir now contains $(ls -1 "$TEMP_DIR" | wc -l) files/directories."
+    TEMP_DIR_TIME="${TEMP_DIR}.time"
+    touch $TEMP_DIR_TIME
+    sleep 2 # find has 1 second resolution
 elif [ -f "$ARCHIVE_PATH" ]; then
     log "Archive $ARCHIVE_PATH exists but temp dir already has $(ls -1 "$TEMP_DIR" | wc -l) files."
     log "Rsync will merge client files with existing archive content."
@@ -62,23 +65,34 @@ log "Current contents: $(ls -la "$TEMP_DIR" | wc -l) items"
 log "Starting rsync session on $TEMP_DIR"
 log "Client can resume with --partial --append if interrupted"
 /usr/bin/rrsync "$TEMP_DIR/"
-
 RSYNC_EXIT=$?
 
 log "Rsync session ended with exit code $RSYNC_EXIT"
 
+if find "$TEMP_DIR" -newermm "$TEMP_DIR_TIME" -print -quit 2>/dev/null|grep -q .; then
+    TEMP_DIR_MODIFIED=1
+fi
+
 # If rsync succeeded, create compressed tarball and clean temp dir
 if [ $RSYNC_EXIT -eq 0 ]; then
-    log "Rsync completed successfully, creating compressed archive $ARCHIVE_PATH."
-    if tar -C "$TEMP_DIR" --use-compress-program=zstd -cf "$ARCHIVE_PATH" .; then
-        log "Archive created successfully: $ARCHIVE_PATH ($(du -sh "$ARCHIVE_PATH"))"
-        # Clean up temp dir only on successful completion
-        rm -rf "$TEMP_DIR"
-        log "Temporary directory cleaned up."
+    if [ $TEMP_DIR_MODIFIED -eq 1 ]; then
+	log "Rsync completed successfully, creating compressed archive $ARCHIVE_PATH."
+	if tar -C "$TEMP_DIR" --use-compress-program=zstd -cf "$ARCHIVE_PATH" .; then
+            log "Archive created successfully: $ARCHIVE_PATH ($(du -sh "$ARCHIVE_PATH"))"
+            # Clean up temp dir only on successful completion
+	    rm -rf "$TEMP_DIR"
+	    rm "$TEMP_DIR_TIME"
+	    log "Temporary directory cleaned up."
+	else
+            log "Error: Failed to create archive $ARCHIVE_PATH"
+            log "Keeping temporary directory $TEMP_DIR for manual inspection"
+            exit 1
+	fi
     else
-        log "Error: Failed to create archive $ARCHIVE_PATH"
-        log "Keeping temporary directory $TEMP_DIR for manual inspection"
-        exit 1
+	log "Rsync completed successfully, no file was modified"
+	rm -rf "$TEMP_DIR"
+	rm "$TEMP_DIR_TIME"
+	log "Temporary directory cleaned up."
     fi
 else
     log "Rsync failed or was interrupted (exit code $RSYNC_EXIT)"
