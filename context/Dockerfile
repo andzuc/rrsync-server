@@ -2,7 +2,15 @@ ARG ALPINE_VERSION=3.20
 FROM alpine:${ALPINE_VERSION}
 
 # Install required runtime dependencies, including gpg for dynamic key retrieval
-RUN apk add --no-cache rsync rrsync openssh tar zstd gnupg python3
+RUN apk add --no-cache \
+    rsync \
+    rrsync \
+    findutils \
+    openssh \
+    tar \
+    zstd \
+    gnupg \
+    python3
 
 # Configure SSH
 RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config && \
@@ -16,9 +24,7 @@ RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/s
 RUN mkdir -p /archives
 
 # Copy scripts to Alpine image
-COPY rrsync-wrapper /usr/local/bin/rrsync-wrapper
-COPY rrsync-wrapper-init /usr/local/bin/rrsync-wrapper-init
-COPY ssh-init /usr/local/bin/ssh-init
+COPY bin /usr/local/bin/
 
 EXPOSE 22
 ENV RRSYNC_UID=1000
