@@ -43,30 +43,36 @@ fi
 
 # Create temp dir if it doesn't exist
 mkdir -p "$TEMP_DIR"
-TEMP_DIR_TIME="${TEMP_DIR}.time"
+update_temp_dir_time()
+{
+    TEMP_DIR_TIME="$(/usr/local/bin/latest_time $TEMP_DIR)"
+}
+update_temp_dir_num()
+{
+    TEMP_DIR_NUM="$(find "$TEMP_DIR" | wc -l)"
+}
 
 # If archive exists AND temp dir is empty, decompress it
 if [ -f "$ARCHIVE_PATH" ] && [ ! "$(ls -A "$TEMP_DIR")" ]; then
     log "Archive $ARCHIVE_PATH exists and temp dir is empty, decompressing."
     tar -I zstd -xf "$ARCHIVE_PATH" -C "$TEMP_DIR"
-    log "Decompression complete. Temp dir now contains $(find "$TEMP_DIR" | wc -l) files/directories."
-    touch $TEMP_DIR_TIME
+    update_temp_dir_time
     TEMP_DIR_MODIFIED=0
+    update_temp_dir_num
+    log "Decompression complete. Temp dir now contains $TEMP_DIR_NUM items."
 elif [ -f "$ARCHIVE_PATH" ]; then
-    log "Archive $ARCHIVE_PATH exists but temp dir already has $(find "$TEMP_DIR" | wc -l) files/directories."
+    TEMP_DIR_MODIFIED=1
+    update_temp_dir_num
+    log "Archive $ARCHIVE_PATH exists but temp dir already has $TEMP_DIR_NUM items."
     log "Rsync will merge client files with existing archive content."
-    touch $TEMP_DIR_TIME
-    TEMP_DIR_MODIFIED=1
 else
-    log "No existing archive, temp dir is ready for client files."
-    touch $TEMP_DIR_TIME
     TEMP_DIR_MODIFIED=1
+    update_temp_dir_num
+    log "No existing archive, temp dir is ready for client files."
 fi
-sleep 2 # find has 1 second resolution
 
-TEMP_DIR_NUM="$(find "$TEMP_DIR" | wc -l)"
-log "Temp directory ready at $TEMP_DIR"
-log "Current contents: $TEMP_DIR_NUM items"
+log "Temp directory ready at $TEMP_DIR."
+log "Current contents: $TEMP_DIR_NUM items."
 
 # Call rrsync in read-write mode on temp dir (no redirection for output, as it's needed for protocol)
 log "Starting rsync session on $TEMP_DIR"
@@ -74,11 +80,15 @@ log "Client can resume with --partial --append if interrupted"
 /usr/bin/rrsync "$TEMP_DIR/"
 RSYNC_EXIT=$?
 
+update_temp_dir_num()
 log "Rsync session ended with exit code $RSYNC_EXIT"
-log "Temp dir now contains $(find "$TEMP_DIR" | wc -l) files/directories."
+log "Temp dir now contains: $TEMP_DIR_NUM items"
 
 if [ $TEMP_DIR_MODIFIED -eq 0 ]; then
-    if find "$TEMP_DIR" -newer "$TEMP_DIR_TIME" -print -quit 2>/dev/null|grep -q .; then
+    OLD_TIME="$TEMP_DIR_TIME"
+    update_temp_dir_time
+    NEW_TIME="$TEMP_DIR_TIME"
+    if [ "$(echo "$NEW_TIME > $OLD_TIME" | bc -l)" -eq 1 ]; then
 	TEMP_DIR_MODIFIED=1
     fi
 fi
@@ -91,7 +101,6 @@ if [ $RSYNC_EXIT -eq 0 ]; then
             log "Archive created successfully: $ARCHIVE_PATH ($(du -sh "$ARCHIVE_PATH"))"
             # Clean up temp dir only on successful completion
 	    rm -rf "$TEMP_DIR"
-	    rm "$TEMP_DIR_TIME"
 	    log "Temporary directory cleaned up."
 	else
             log "Error: Failed to create archive $ARCHIVE_PATH"
@@ -101,7 +110,6 @@ if [ $RSYNC_EXIT -eq 0 ]; then
     else
 	log "Rsync completed successfully, no file was modified"
 	rm -rf "$TEMP_DIR"
-	rm "$TEMP_DIR_TIME"
 	log "Temporary directory cleaned up."
     fi
 else

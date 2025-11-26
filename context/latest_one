@@ -1,2 +1,0 @@
-#!/bin/sh
-find $1 -printf '%T@ %p %y\n' 2>/dev/null | sort -nr | head -n1 | cut -d' ' -f2-

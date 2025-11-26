@@ -24,10 +24,7 @@ RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/s
 RUN mkdir -p /archives
 
 # Copy scripts to Alpine image
-COPY latest_one /usr/local/bin/latest_one
-COPY rrsync-wrapper /usr/local/bin/rrsync-wrapper
-COPY rrsync-wrapper-init /usr/local/bin/rrsync-wrapper-init
-COPY ssh-init /usr/local/bin/ssh-init
+COPY bin /usr/local/bin/
 
 EXPOSE 22
 ENV RRSYNC_UID=1000
