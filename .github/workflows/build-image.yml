@@ -85,3 +85,10 @@ jobs:
             org.opencontainers.image.licenses=MIT
           provenance: true
           sbom: true
+      - name: Update Docker Hub README
+        if: github.event_name != 'pull_request'
+        uses: peter-evans/dockerhub-description@v5
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+          repository: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}
