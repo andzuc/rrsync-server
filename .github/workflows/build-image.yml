@@ -85,6 +85,8 @@ jobs:
             org.opencontainers.image.licenses=MIT
           provenance: true
           sbom: true
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Update Docker Hub README
         if: github.event_name != 'pull_request'
         uses: peter-evans/dockerhub-description@v5
