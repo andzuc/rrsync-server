@@ -1,0 +1,14 @@
+services:
+  rrsync-server:
+    image: andzuc/rrsync-server:1.3-alpine-3.20
+    container_name: rrsync-server
+    environment:
+      - GPG_KEYID
+    volumes:
+      - rrsync-archives:/archives
+      - rrsync-tmp:/tmp/rrsync
+    ports:
+      - 2222:22
+volumes:
+  rrsync-archives:
+  rrsync-tmp:
