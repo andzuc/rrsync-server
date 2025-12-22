@@ -11,4 +11,6 @@ services:
       - 2222:22
 volumes:
   rrsync-archives:
+    external: true
   rrsync-tmp:
+    external: true
