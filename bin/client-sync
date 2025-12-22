@@ -3,8 +3,8 @@
 set -e
 
 # Configuration
-export ARCHIVE_NAME="${1:-project-backup}"
-LOCAL_PATH="${2:-./data/}"
+export ARCHIVE_NAME="${1}"
+LOCAL_PATH="${2}"
 REMOTE_HOST="${RRSYNC_SERVER:-localhost}"
 REMOTE_PORT="${RRSYNC_PORT:-2222}"
 RSYNC_OPTS="-avz --progress --partial --append"
@@ -13,9 +13,13 @@ RSYNC_OPTS="-avz --progress --partial --append"
 SCRIPT_NAME=$(basename "$0")
 
 # Validate inputs
-if [ -z "$ARCHIVE_NAME" ]; then
-    echo "Usage: $0 <archive_name> [local_path]"
+if [ "$#" -ne 2 ]; then
+    echo "Usage: $0 <archive_name> <local_path>"
     echo "Example: $0 project-backup ./mydata/"
+    echo "Environment variables:"
+    printf "\tRRSYNC_OPTS: ${RSYNC_OPTS}\n"
+    printf "\tRRSYNC_SERVER: ${RENOTE_HOST}\n"
+    printf "\tRRSYNC_PORT: ${RENOTE_PORT}\n"
     exit 1
 fi
 
