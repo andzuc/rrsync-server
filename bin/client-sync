@@ -18,8 +18,8 @@ if [ "$#" -ne 2 ]; then
     echo "Example: $0 project-backup ./mydata/"
     echo "Environment variables:"
     printf "\tRRSYNC_OPTS: ${RSYNC_OPTS}\n"
-    printf "\tRRSYNC_SERVER: ${RENOTE_HOST}\n"
-    printf "\tRRSYNC_PORT: ${RENOTE_PORT}\n"
+    printf "\tRRSYNC_SERVER: ${REMOTE_HOST}\n"
+    printf "\tRRSYNC_PORT: ${REMOTE_PORT}\n"
     exit 1
 fi
 
