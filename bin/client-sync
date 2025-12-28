@@ -7,7 +7,7 @@ export ARCHIVE_NAME="${1}"
 LOCAL_PATH="${2}"
 REMOTE_HOST="${RRSYNC_SERVER:-localhost}"
 REMOTE_PORT="${RRSYNC_PORT:-2222}"
-RSYNC_OPTS="-avz --progress --partial --append"
+RSYNC_OPTS="-avz -o -g --numeric-ids --progress --partial --append"
 
 # Determine operation based on script name
 SCRIPT_NAME=$(basename "$0")
@@ -37,7 +37,7 @@ if [ "$SCRIPT_NAME" = "client-backup" ]; then
 
     # Execute rsync for backup
     rsync $RSYNC_OPTS \
-      -e "ssh -vvv -o SendEnv=ARCHIVE_NAME -p $REMOTE_PORT" \
+      -e "ssh -v -o SendEnv=ARCHIVE_NAME -p $REMOTE_PORT" \
       "$LOCAL_PATH" \
       "rrsync@$REMOTE_HOST:/"
 
@@ -52,7 +52,7 @@ elif [ "$SCRIPT_NAME" = "client-restore" ]; then
 
     # Execute rsync for restore
     rsync $RSYNC_OPTS \
-      -e "ssh -vvv -o SendEnv=ARCHIVE_NAME -p $REMOTE_PORT" \
+      -e "ssh -v -o SendEnv=ARCHIVE_NAME -p $REMOTE_PORT" \
       "rrsync@$REMOTE_HOST:/" \
       "$LOCAL_PATH"
 
